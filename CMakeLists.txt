@@ -1,35 +1,71 @@
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.12)
 project(sparse_bundle_adjustment)
 
 if(NOT CMAKE_CXX_STANDARD)
-  set(CMAKE_CXX_STANDARD 11)
+  set(CMAKE_CXX_STANDARD 17)
 endif()
 
-find_package(catkin REQUIRED COMPONENTS roscpp)
+# Find ROS 2 and system dependencies
+find_package(ament_cmake REQUIRED)
+find_package(rclcpp REQUIRED) # Replaces roscpp
 find_package(Eigen3 REQUIRED)
+
+# SuiteSparse fallback logic retained
 find_package(suitesparse QUIET)
 if(NOT SuiteSparse_FOUND)
   set(SuiteSparse_LIBRARIES blas lapack cholmod cxsparse)
 endif()
 
-include_directories(${catkin_INCLUDE_DIRS} ${EIGEN3_INCLUDE_DIRS} ${SuiteSparse_INCLUDE_DIRS})
-add_definitions(${EIGEN3_DEFINITIONS})
-INCLUDE_DIRECTORIES(include)
-
-catkin_package(
-  INCLUDE_DIRS include
-  LIBRARIES sba
+# Define the shared library
+add_library(sba 
+  src/sba.cpp 
+  src/spa.cpp 
+  src/spa2d.cpp 
+  src/csparse.cpp 
+  src/proj.cpp 
+  src/node.cpp 
+  src/sba_file_io.cpp
 )
 
-add_definitions(-DSBA_CHOLMOD)
+# Apply definitions directly to the target
+target_compile_definitions(sba PUBLIC SBA_CHOLMOD)
 
-# SBA library
-add_library(sba src/sba.cpp src/spa.cpp src/spa2d.cpp src/csparse.cpp src/proj.cpp src/node.cpp src/sba_file_io.cpp)
-#rosbuild_add_compile_flags(sba ${SSE_FLAGS})
-target_link_libraries(sba ${SuiteSparse_LIBRARIES})
+# Interface includes
+target_include_directories(sba 
+  PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+    ${SuiteSparse_INCLUDE_DIRS}
+)
 
-install(DIRECTORY include/sparse_bundle_adjustment/
-        DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION})
+# Link ROS 2 dependencies
+ament_target_dependencies(sba PUBLIC rclcpp)
 
-install(TARGETS sba
-        LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION})
+# Link system dependencies (using modern imported targets where available)
+target_link_libraries(sba 
+  PUBLIC 
+    Eigen3::Eigen 
+    ${SuiteSparse_LIBRARIES}
+)
+
+# Install headers
+install(
+  DIRECTORY include/${PROJECT_NAME}/
+  DESTINATION include/${PROJECT_NAME}
+)
+
+# Install target and export it
+install(
+  TARGETS sba
+  EXPORT export_${PROJECT_NAME}
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+)
+
+# Export macros for downstream packages
+ament_export_targets(export_${PROJECT_NAME})
+ament_export_dependencies(rclcpp Eigen3)
+
+# Finalize the ament package
+ament_package()

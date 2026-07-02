@@ -1,4 +1,6 @@
-<package format="2">
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
   <name>sparse_bundle_adjustment</name>
   <description>ROS wrapper for the sparse bundle adjustment (sba) library (needed for slam_karto)</description>
   <version>0.4.4</version>
@@ -6,12 +8,15 @@
   <maintainer email="mfergs7@gmail.com">Michael Ferguson</maintainer>
   <maintainer email="luc.bettaieb@gmail.com">Luc Bettaieb</maintainer>
 
-  <buildtool_depend>catkin</buildtool_depend>
+  <buildtool_depend>ament_cmake</buildtool_depend>
 
-  <depend>roscpp</depend>
+  <depend>rclcpp</depend>
   <depend>eigen</depend>
   <depend>liblapack-dev</depend>
   <depend>libblas-dev</depend>
   <depend>suitesparse</depend>
 
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
 </package>
